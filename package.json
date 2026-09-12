@@ -1,0 +1,24 @@
+{
+  "name": "expense-tracker",
+  "version": "1.0.0",
+  "description": "Modern full-stack Expense Tracker with Node.js, Express, SQLite, and vanilla frontend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "expense-tracker",
+    "finance",
+    "budget",
+    "sqlite",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
+  }
+}

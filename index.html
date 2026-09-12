@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VaultFlow — Modern Personal Expense Tracker</title>
+  <meta name="description" content="A sleek, modern full-stack personal finance and expense tracker with SQLite database, real-time analytics, and dynamic category insights.">
+  
+  <!-- Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for beautiful interactive analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- App Container -->
+  <div class="app-layout">
+    
+    <!-- Top Navbar -->
+    <header class="navbar">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <i data-lucide="wallet-cards"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">VaultFlow</span>
+          <span class="brand-tag">Finance</span>
+        </div>
+      </div>
+
+      <div class="nav-center">
+        <div class="nav-center-badge">
+          <i data-lucide="activity"></i>
+          <span>Expense Tracker</span>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button id="themeToggleBtn" class="icon-btn" title="Toggle Dark/Light Mode" aria-label="Toggle Theme">
+          <i data-lucide="sun" id="themeIcon"></i>
+        </button>
+
+        <a href="/api/export/csv" class="btn btn-secondary" id="exportCsvBtn" title="Export all transactions as CSV">
+          <i data-lucide="download"></i>
+          <span>Export CSV</span>
+        </a>
+
+        <button id="openAddModalBtn" class="btn btn-primary">
+          <i data-lucide="plus"></i>
+          <span>Add Transaction</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Hero Header & Greeting -->
+      <section class="overview-header">
+        <div>
+          <h1 class="page-title">Financial Dashboard</h1>
+          <p class="page-subtitle">Track your net cash flow, spending habits, and budget analytics in real-time.</p>
+        </div>
+        <div class="date-badge">
+          <i data-lucide="calendar"></i>
+          <span id="currentDateDisplay">Today</span>
+        </div>
+      </section>
+
+      <!-- Metric Stat Cards -->
+      <section class="stats-grid" aria-label="Key Financial Metrics">
+        
+        <!-- Total Balance Card -->
+        <div class="stat-card balance-card">
+          <div class="stat-header">
+            <span class="stat-title">Net Balance</span>
+            <div class="stat-icon-wrap balance-icon">
+              <i data-lucide="scale"></i>
+            </div>
+          </div>
+          <div class="stat-value" id="netBalanceValue">$0.00</div>
+          <div class="stat-footer">
+            <span class="badge badge-success" id="balanceStatusBadge">
+              <i data-lucide="trending-up"></i> Healthy
+            </span>
+            <span class="stat-subtext">Total cash reserve</span>
+          </div>
+        </div>
+
+        <!-- Total Income Card -->
+        <div class="stat-card income-card">
+          <div class="stat-header">
+            <span class="stat-title">Total Income</span>
+            <div class="stat-icon-wrap income-icon">
+              <i data-lucide="arrow-down-left"></i>
+            </div>
+          </div>
+          <div class="stat-value text-income" id="totalIncomeValue">$0.00</div>
+          <div class="stat-footer">
+            <span class="badge badge-income" id="incomeCountBadge">0 deposits</span>
+            <span class="stat-subtext">All sources</span>
+          </div>
+        </div>
+
+        <!-- Total Expenses Card -->
+        <div class="stat-card expense-card">
+          <div class="stat-header">
+            <span class="stat-title">Total Expenses</span>
+            <div class="stat-icon-wrap expense-icon">
+              <i data-lucide="arrow-up-right"></i>
+            </div>
+          </div>
+          <div class="stat-value text-expense" id="totalExpenseValue">$0.00</div>
+          <div class="stat-footer">
+            <span class="badge badge-expense" id="expenseCountBadge">0 purchases</span>
+            <span class="stat-subtext">Recorded spending</span>
+          </div>
+        </div>
+
+        <!-- Savings Rate Card -->
+        <div class="stat-card savings-card">
+          <div class="stat-header">
+            <span class="stat-title">Savings Rate</span>
+            <div class="stat-icon-wrap savings-icon">
+              <i data-lucide="piggy-bank"></i>
+            </div>
+          </div>
+          <div class="stat-value text-savings" id="savingsRateValue">0%</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="savingsProgressBar" style="width: 0%;"></div>
+          </div>
+          <div class="stat-footer">
+            <span class="stat-subtext" id="savingsAdviceText">Of net income saved</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Analytics Charts Section -->
+      <section class="charts-grid" aria-label="Spending Analytics">
+        
+        <!-- Category Distribution Chart Card -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <h2 class="chart-title">Expense Breakdown</h2>
+              <p class="chart-subtitle">Distribution by category</p>
+            </div>
+            <div class="chart-actions">
+              <button class="pill-btn active" id="chartExpenseToggle">Expenses</button>
+              <button class="pill-btn" id="chartIncomeToggle">Income</button>
+            </div>
+          </div>
+          <div class="chart-body">
+            <div class="canvas-wrapper">
+              <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="custom-legend" id="categoryLegend"></div>
+          </div>
+        </div>
+
+        <!-- Monthly Cash Flow Trends Card -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <h2 class="chart-title">Cash Flow Trends</h2>
+              <p class="chart-subtitle">Monthly Income vs. Expense comparison</p>
+            </div>
+            <div class="trend-summary-pill" id="trendSummaryBadge">
+              <i data-lucide="bar-chart-2"></i>
+              <span>Live Timeline</span>
+            </div>
+          </div>
+          <div class="chart-body">
+            <div class="canvas-wrapper">
+              <canvas id="monthlyTrendChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Transactions Section -->
+      <section class="transactions-section">
+        
+        <div class="section-top-bar">
+          <div>
+            <h2 class="section-title">Transactions</h2>
+            <p class="section-subtitle">Manage, search and filter your records</p>
+          </div>
+          <div class="results-count-pill" id="txCountPill">
+            Showing <span id="txCountNumber">0</span> items
+          </div>
+        </div>
+
+        <!-- Filters & Search Toolbar -->
+        <div class="toolbar">
+          
+          <!-- Search input -->
+          <div class="search-box">
+            <i data-lucide="search" class="search-icon"></i>
+            <input 
+              type="text" 
+              id="searchInput" 
+              placeholder="Search by title or notes..." 
+              autocomplete="off"
+            >
+            <button id="clearSearchBtn" class="clear-search-btn" title="Clear search" style="display: none;">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+
+          <!-- Type filter buttons -->
+          <div class="filter-type-group" role="group" aria-label="Transaction Type Filter">
+            <button class="type-filter-btn active" data-type="all">All</button>
+            <button class="type-filter-btn" data-type="expense">Expenses</button>
+            <button class="type-filter-btn" data-type="income">Income</button>
+          </div>
+
+          <!-- Category filter selector -->
+          <div class="select-wrapper">
+            <select id="categoryFilter" aria-label="Filter by Category">
+              <option value="all">All Categories</option>
+              <option value="Food & Dining">🍔 Food & Dining</option>
+              <option value="Housing">🏠 Housing</option>
+              <option value="Utilities">💡 Utilities</option>
+              <option value="Transportation">🚗 Transportation</option>
+              <option value="Shopping">🛍️ Shopping</option>
+              <option value="Entertainment">🎬 Entertainment</option>
+              <option value="Health & Fitness">💊 Health & Fitness</option>
+              <option value="Salary">💼 Salary</option>
+              <option value="Freelance">💻 Freelance</option>
+              <option value="Investments">📈 Investments</option>
+              <option value="Other">✨ Other</option>
+            </select>
+          </div>
+
+          <!-- Sort selector -->
+          <div class="select-wrapper">
+            <select id="sortBySelect" aria-label="Sort Transactions">
+              <option value="date_desc">Date: Newest First</option>
+              <option value="date_asc">Date: Oldest First</option>
+              <option value="amount_desc">Amount: High to Low</option>
+              <option value="amount_asc">Amount: Low to High</option>
+              <option value="title_asc">Title: A to Z</option>
+            </select>
+          </div>
+
+          <!-- Reset Filter Button -->
+          <button id="resetFiltersBtn" class="btn btn-ghost" title="Reset all filters">
+            <i data-lucide="rotate-ccw"></i>
+            <span>Reset</span>
+          </button>
+
+        </div>
+
+        <!-- Transactions Table Container -->
+        <div class="table-container">
+          <table class="transactions-table" id="transactionsTable">
+            <thead>
+              <tr>
+                <th>Transaction</th>
+                <th>Category</th>
+                <th>Payment Method</th>
+                <th>Date</th>
+                <th class="text-right">Amount</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="transactionsList">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+
+          <!-- Empty State -->
+          <div class="empty-state" id="emptyState" style="display: none;">
+            <div class="empty-icon-box">
+              <i data-lucide="receipt"></i>
+            </div>
+            <h3 class="empty-title">No transactions found</h3>
+            <p class="empty-description">Try adjusting your search query or filters, or add a new transaction above.</p>
+            <button class="btn btn-primary" id="emptyAddBtn">
+              <i data-lucide="plus"></i> Add Transaction
+            </button>
+          </div>
+
+          <!-- Loading State Indicator -->
+          <div class="loading-state" id="loadingState">
+            <div class="spinner"></div>
+            <span>Loading records...</span>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <p>VaultFlow • Personal Expense Tracker</p>
+        <span class="footer-dot">•</span>
+        <p>All records stored securely</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Add/Edit Transaction Modal -->
+  <div class="modal-overlay" id="txModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <h2 class="modal-title" id="modalTitle">Add Transaction</h2>
+          <p class="modal-subtitle" id="modalSubtitle">Log a new income or expense into your database.</p>
+        </div>
+        <button class="icon-btn close-btn" id="closeModalBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="txForm" class="modal-form" novalidate>
+        <input type="hidden" id="txId" value="">
+
+        <!-- Transaction Type Switcher -->
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <div class="type-toggle-group">
+            <label class="type-toggle-option">
+              <input type="radio" name="txType" value="expense" checked>
+              <span class="type-btn expense-btn">
+                <i data-lucide="arrow-up-right"></i>
+                Expense
+              </span>
+            </label>
+            <label class="type-toggle-option">
+              <input type="radio" name="txType" value="income">
+              <span class="type-btn income-btn">
+                <i data-lucide="arrow-down-left"></i>
+                Income
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Title & Amount in a 2-column row -->
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label class="form-label" for="txTitle">Title / Description <span class="required">*</span></label>
+            <input 
+              type="text" 
+              id="txTitle" 
+              class="form-input" 
+              placeholder="e.g., Grocery Shopping, Monthly Salary" 
+              required
+            >
+            <span class="field-error" id="txTitleError"></span>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label" for="txAmount">Amount ($) <span class="required">*</span></label>
+            <div class="input-prefix-wrap">
+              <span class="input-prefix">$</span>
+              <input 
+                type="number" 
+                id="txAmount" 
+                class="form-input with-prefix" 
+                step="0.01" 
+                min="0.01" 
+                placeholder="0.00" 
+                required
+              >
+            </div>
+            <span class="field-error" id="txAmountError"></span>
+          </div>
+        </div>
+
+        <!-- Category & Date in a 2-column row -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label" for="txCategory">Category <span class="required">*</span></label>
+            <select id="txCategory" class="form-input" required>
+              <!-- Will be updated dynamically or standard -->
+              <option value="Food & Dining">🍔 Food & Dining</option>
+              <option value="Housing">🏠 Housing</option>
+              <option value="Utilities">💡 Utilities</option>
+              <option value="Transportation">🚗 Transportation</option>
+              <option value="Shopping">🛍️ Shopping</option>
+              <option value="Entertainment">🎬 Entertainment</option>
+              <option value="Health & Fitness">💊 Health & Fitness</option>
+              <option value="Salary">💼 Salary</option>
+              <option value="Freelance">💻 Freelance</option>
+              <option value="Investments">📈 Investments</option>
+              <option value="Other">✨ Other</option>
+            </select>
+          </div>
+
+          <div class="form-group flex-1">
+            <label class="form-label" for="txDate">Date <span class="required">*</span></label>
+            <input 
+              type="date" 
+              id="txDate" 
+              class="form-input" 
+              required
+            >
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="form-group">
+          <label class="form-label" for="txPaymentMethod">Payment Method</label>
+          <select id="txPaymentMethod" class="form-input">
+            <option value="Credit Card">💳 Credit Card</option>
+            <option value="Debit Card">💳 Debit Card</option>
+            <option value="Bank Transfer">🏛️ Bank Transfer</option>
+            <option value="Cash">💵 Cash</option>
+            <option value="Apple Pay / Google Pay">📱 Mobile Pay</option>
+            <option value="Other">✨ Other</option>
+          </select>
+        </div>
+
+        <!-- Notes (Optional) -->
+        <div class="form-group">
+          <label class="form-label" for="txNotes">Notes (Optional)</label>
+          <textarea 
+            id="txNotes" 
+            class="form-input textarea-input" 
+            rows="2" 
+            placeholder="Add extra context, receipt notes, or vendor..."
+          ></textarea>
+        </div>
+
+        <!-- Modal Footer Actions -->
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="cancelModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveTxBtn">
+            <i data-lucide="check"></i>
+            <span>Save Transaction</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" id="deleteModal" aria-hidden="true">
+    <div class="modal-card delete-card" role="dialog" aria-modal="true">
+      <div class="delete-icon-box">
+        <i data-lucide="trash-2"></i>
+      </div>
+      <h3 class="delete-title">Delete Transaction?</h3>
+      <p class="delete-desc">Are you sure you want to remove <strong id="deleteTxTitle">this transaction</strong>? This action cannot be undone in the SQLite database.</p>
+      
+      <div class="delete-actions">
+        <button class="btn btn-ghost" id="cancelDeleteBtn">Cancel</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">
+          <i data-lucide="trash"></i>
+          <span>Delete Record</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Main Application Script -->
+  <script src="script.js"></script>
+</body>
+</html>
